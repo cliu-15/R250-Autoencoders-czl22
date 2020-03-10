@@ -43,7 +43,6 @@ class ND_AE(nn.Module):
         #sample over geometric distribution -- ****determine p???
         b = np.random.geometric(p = (1.0 - 0.1), size = self.latent_dim)[0]
         if b < np.shape(z)[0]:
-            #new_z = z[:,0:b].clone()
             new_z = z.clone()
             new_z[:, b:] = 0
         else:
