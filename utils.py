@@ -7,6 +7,7 @@ import torchvision
 import matplotlib.pyplot as plt
 import itertools
 
+## Written by Dr. Damon Wischik
 
 ## Load the MNIST dataset
 

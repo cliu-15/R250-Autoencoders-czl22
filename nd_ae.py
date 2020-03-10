@@ -2,16 +2,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-## Basic autoencoder
-# Adapted from introductory code by Dr. Damon Wischik
-
 import IPython
 from utils import mnist, mnist_batched
 from utils import interrupted, enumerate_cycle
+import numpy as np
 
+## Nested dropout autoencoder (based on Rippel et al., 2014)
 
-## Simple autoencoder
-class SimpleAE(nn.Module):
+class ND_AE(nn.Module):
     def __init__(self, latent_dim=4):
         super().__init__()
         self.encoder = nn.Sequential(
@@ -39,10 +37,28 @@ class SimpleAE(nn.Module):
             nn.Conv2d(4, 1, 1, 1),
             nn.Sigmoid()
         )
+        self.latent_dim = latent_dim
+
+    def truncate(self, z):
+        #sample over geometric distribution -- ****determine p???
+        b = np.random.geometric(p = (1.0 - 0.1), size = self.latent_dim)[0]
+        if b < np.shape(z)[0]:
+            #new_z = z[:,0:b].clone()
+            new_z = z.clone()
+            new_z[:, b:] = 0
+        else:
+            new_z = z
+        return new_z
 
     def forward(self, x):
         z = self.encoder(x)
+        z = self.truncate(z)
         return z, self.decoder(z)
+
+
+# All the standard functions you might like to apply come in two versions:
+# as a pure function (e.g. torch.nn.functional.sigmoid) and as a Module (class torch.nn.Sigmoid).
+# All except for torch.reshape... so here is a Module version of it.
 
 class Reshaper(nn.Module):
     def __init__(self, dim):
@@ -52,10 +68,10 @@ class Reshaper(nn.Module):
         return torch.reshape(x, self.dim)
 
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     # Create a new model object, and initialize its parameters
-    fit = SimpleAE(latent_dim=6)
+    fit = ND_AE(latent_dim=8)
 
     # Prepare to iterate through all the training data.
     # See the note at the top, under Utilities.
@@ -65,7 +81,8 @@ if __name__ == '__main__':
 
     print("Press Ctrl+C to end training and save parameters")
 
-    while not interrupted():
+    epoch = 0
+    while not interrupted() and epoch < 10:
         (epoch, batch_num), (imgs,lbls) = next(iter_training_data)
         optimizer.zero_grad()
         _,rx = fit(imgs)
@@ -78,4 +95,4 @@ if __name__ == '__main__':
             print(f'epoch={epoch} batch={batch_num}/{len(mnist_batched)} loss={e.item()}')
 
     # Optionally, save all the parameters
-    torch.save(fit.state_dict(), 'intro_ae_6d.pt')
+    torch.save(fit.state_dict(), 'nd_ae_8d.pt')
